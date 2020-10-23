@@ -66,30 +66,31 @@ CFG = {
     'lr': 0.0005,
     'epochs': 1,
     'device': 'cuda', # cuda, cpu
-    'train_bs': 128,
+    'train_bs': 96,
     'valid_bs': 256,
     'accum_iter': 1,
     'verbose_step': 1,
     'num_workers': 6,
-    'efbnet': 'efficientnet-b0',
+    'efbnet': 'efficientnet-b1',
     
-    'train_folds': [np.arange(0,1),#np.arange(0,16),
-                    #np.concatenate([np.arange(0,12), np.arange(16,20)]),
-                    #np.concatenate([np.arange(0,8), np.arange(12,20)]),
-                    #np.concatenate([np.arange(0,4), np.arange(8,20)]),
-                    #np.arange(4,20),
+    'train_folds': [#np.arange(0,1),
+                    np.arange(0,16),
+                    np.concatenate([np.arange(0,12), np.arange(16,20)]),
+                    np.concatenate([np.arange(0,8), np.arange(12,20)]),
+                    np.concatenate([np.arange(0,4), np.arange(8,20)]),
+                    np.arange(4,20),
                    ],#[np.arange(0,16)],
     
-    'valid_folds': [np.arange(16, 17),
-                    #np.arange(16,20),
-                    #np.arange(12,16),
-                    #np.arange(8,12),
-                    #np.arange(4,8),
-                    #np.arange(0,4)
+    'valid_folds': [#np.arange(16, 17),
+                    np.arange(16,20),
+                    np.arange(12,16),
+                    np.arange(8,12),
+                    np.arange(4,8),
+                    np.arange(0,4)
                    ],#[np.arange(16,20)],
     
     'model_path': '/home/vishy/Desktop/Myfiles/Kaggle/RSNA_PE/models',
-    'tag': 'efb0_stage1_example'
+    'tag': 'efb1_stage1_example'
 }
 
 

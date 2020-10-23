@@ -83,7 +83,7 @@ CFG = {
 }
 
 
-SEED = 42321
+SEED = 42
 
 def seed_everything(seed):
     random.seed(seed)
