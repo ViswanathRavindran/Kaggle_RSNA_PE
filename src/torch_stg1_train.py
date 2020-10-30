@@ -36,7 +36,7 @@ from tqdm import tqdm
 CFG = {
     'train': True,
     
-    'train_img_path': '/media/vishy/hdd1/Kaggle/RSNA/rsna_dicom/train',
+    'train_img_path': '/media/vishy/fastdrive/rsna-pe/train',
     'test_img_path': '/media/vishy/hdd1/Kaggle/RSNA/rsna_dicom/test',
     'cv_fold_path': '/home/vishy/Desktop/Myfiles/Kaggle/RSNA_PE/inputs/rsna_train_splits_fold_20.csv',
     'train_path': '/home/vishy/Desktop/Myfiles/Kaggle/RSNA_PE/inputs/train.csv',
@@ -66,7 +66,7 @@ CFG = {
     'lr': 0.0005,
     'epochs': 1,
     'device': 'cuda', # cuda, cpu
-    'train_bs': 96,
+    'train_bs': 104,
     'valid_bs': 256,
     'accum_iter': 1,
     'verbose_step': 1,

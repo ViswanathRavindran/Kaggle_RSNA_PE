@@ -1,7 +1,7 @@
 import os
 import sys
 # os.environ['CUDA_VISIBLE_DEVICES'] = '0,1' # specify GPUs locally
-
+from glob import glob
 # libraries
 import time
 import numpy as np
@@ -30,14 +30,11 @@ import albumentations
 
 import monai
 from monai.data import NiftiDataset
-
-from glob import glob
 from monai.transforms import LoadNifti, Randomizable, apply_transform
 from monai.transforms import AddChannel, Compose, RandRotate90, Resize, ScaleIntensity, ToTensor, RandAffine
 from monai.utils import get_seed
 
-from apex import amp
-
+# from apex import amp # I cannot install apex in Kagggle notebook
 
 device = torch.device('cuda')
 
@@ -53,46 +50,37 @@ set_seed(42)
 
 DEBUG = False
 
-kernel_type = 'monai3d_160_3ch_1e-5_20ep_aug'
+kernel_type = 'monai3d_128_3ch_1e-5_20ep_aug_singlelabel'
 
-image_size = 160
+image_size = 128
 use_amp = False
 data_dir = '/home/vishy/Desktop/Myfiles/Kaggle/RSNA_PE/inputs/train-jpegs'
 num_workers = 6
 init_lr = 1e-5
-out_dim = 9
+out_dim = 1
 freeze_epo = 0
 warmup_epo = 1
-cosine_epo = 2 if DEBUG else 19
+cosine_epo = 2 if DEBUG else 14
 n_epochs = freeze_epo + warmup_epo + cosine_epo
 
-target_cols = [ 'negative_exam_for_pe', # exam level
-                'rv_lv_ratio_gte_1', # exam level
-                'rv_lv_ratio_lt_1', # exam level
-                'leftsided_pe', # exam level
-                'chronic_pe', # exam level
-                'rightsided_pe', # exam level
-                'acute_and_chronic_pe', # exam level
-                'central_pe', # exam level
-                'indeterminate' # exam level
-                ]
+target_cols = ['pe_present_on_image']
 
 df = pd.read_csv('/home/vishy/Desktop/Myfiles/Kaggle/RSNA_PE/inputs/train.csv')
 
 from sklearn.model_selection import GroupKFold
 np.random.seed(0)
-group_kfold = GroupKFold(n_splits=5)
+group_kfold = GroupKFold(n_splits=3)
 print(group_kfold)
 
 df['fold'] = -1
 for i, (_, val_index) in enumerate(group_kfold.split(df, groups=df.StudyInstanceUID)):
     df.loc[val_index, 'fold'] = i
 
-df.fold.value_counts()
+print(df.fold.value_counts())
 
 df_study = df.drop_duplicates('StudyInstanceUID')[['StudyInstanceUID','SeriesInstanceUID','fold']+target_cols]
 if DEBUG:
-    df_study = df_study.head(600)
+    df_study = df_study.head(400)
 
 class RSNADataset3D(torch.utils.data.Dataset, Randomizable):
     def __init__(self, csv, mode, transform=None):
@@ -136,29 +124,6 @@ train_transforms = Compose([ScaleIntensity(),
                             ToTensor()])
 val_transforms = Compose([ScaleIntensity(), Resize((image_size, image_size, image_size)), ToTensor()])
 
-dataset_show = RSNADataset3D(df_study.head(5), 'train', transform=val_transforms)
-dataset_show_aug = RSNADataset3D(df_study.head(5), 'train', transform=train_transforms)
-
-# from pylab import rcParams
-# rcParams['figure.figsize'] = 20,5
-# for i in range(5):
-#     f, axarr = plt.subplots(1,6)
-#     img, label = dataset_show[i]
-#     for j in range(6):        
-#         if j<=2: axarr[j].imshow(img.numpy().transpose(1,2,3,0).mean(axis=j))
-#         elif j==3: axarr[j].imshow(img.numpy().transpose(1,2,3,0)[image_size//2,:,:])
-#         elif j==4: axarr[j].imshow(img.numpy().transpose(1,2,3,0)[:,image_size//2,:])
-#         elif j==5: axarr[j].imshow(img.numpy().transpose(1,2,3,0)[:,:,image_size//2])
-#         axarr[j].set_title(f"Orig {i}")
-#     f, axarr = plt.subplots(1,6)
-#     img, label = dataset_show_aug[i]    
-#     for j in range(6):        
-#         if j<=2: axarr[j].imshow(img.numpy().transpose(1,2,3,0).mean(axis=j))
-#         elif j==3: axarr[j].imshow(img.numpy().transpose(1,2,3,0)[image_size//2,:,:])
-#         elif j==4: axarr[j].imshow(img.numpy().transpose(1,2,3,0)[:,image_size//2,:])
-#         elif j==5: axarr[j].imshow(img.numpy().transpose(1,2,3,0)[:,:,image_size//2])
-#         axarr[j].set_title(f"Aug {i}")
-#     plt.show()
 
 bce = nn.BCEWithLogitsLoss()
 def criterion(logits, target): 
@@ -189,6 +154,7 @@ def train_epoch(model, loader, optimizer):
         smooth_loss = sum(train_loss[-100:]) / min(len(train_loss), 100)
         bar.set_description('loss: %.5f, smth: %.5f' % (loss_np, smooth_loss))
     return train_loss
+
 
 def val_epoch(model, loader, is_ext=None, n_test=1, get_output=False):
 
@@ -232,15 +198,16 @@ class GradualWarmupSchedulerV2(GradualWarmupScheduler):
         else:
             return [base_lr * ((self.multiplier - 1.) * self.last_epoch / self.total_epoch + 1.) for base_lr in self.base_lrs]
 
-
 def run(fold):
+    # print(df_study.head())
+    print("Fold is:", fold)
     df_train = df_study[(df_study['fold'] != fold)]
     df_valid = df_study[(df_study['fold'] == fold)]
 
     dataset_train = RSNADataset3D(df_train, 'train', transform=train_transforms)
     dataset_valid = RSNADataset3D(df_valid, 'val', transform=val_transforms)
-    train_loader = torch.utils.data.DataLoader(dataset_train, batch_size=4, sampler=RandomSampler(dataset_train), num_workers=num_workers)
-    valid_loader = torch.utils.data.DataLoader(dataset_valid, batch_size=4, num_workers=num_workers)
+    train_loader = torch.utils.data.DataLoader(dataset_train, batch_size=8, sampler=RandomSampler(dataset_train), num_workers=num_workers)
+    valid_loader = torch.utils.data.DataLoader(dataset_valid, batch_size=8, num_workers=num_workers)
 
     model = monai.networks.nets.densenet.densenet121(spatial_dims=3, in_channels=3, out_channels=out_dim).to(device)
 
@@ -278,3 +245,7 @@ def run(fold):
     torch.save(model.state_dict(), f'{kernel_type}_model_fold{fold}.pth')
 
 run(fold=0)
+run(fold=1)
+run(fold=2)
+# run(fold=3)
+# run(fold=4)

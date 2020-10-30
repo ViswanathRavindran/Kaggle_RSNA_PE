@@ -35,7 +35,7 @@ from tqdm import tqdm
 CFG = {
     'train': False,
     
-    'train_img_path': '/media/vishy/hdd1/Kaggle/RSNA/rsna_dicom/train',
+    'train_img_path': '/media/vishy/fastdrive/rsna-pe/train',
     'test_img_path': '/media/vishy/hdd1/Kaggle/RSNA/rsna_dicom/test',
     'cv_fold_path': '/home/vishy/Desktop/Myfiles/Kaggle/RSNA_PE/inputs/rsna_train_splits_fold_20.csv',
     'train_path': '/home/vishy/Desktop/Myfiles/Kaggle/RSNA_PE/inputs/train.csv',
@@ -70,27 +70,27 @@ CFG = {
     'accum_iter': 8,
     'verbose_step': 1,
     'num_workers': 4,
-    'efbnet': 'efficientnet-b0',
+    'efbnet': 'efficientnet-b1',
     
     'train_folds': [np.arange(0,16),
                     np.concatenate([np.arange(0,12), np.arange(16,20)]),
                     np.concatenate([np.arange(0,8), np.arange(12,20)]),
-                    np.concatenate([np.arange(0,4), np.arange(8,20)]),
-                    np.arange(4,20),
+                    #np.concatenate([np.arange(0,4), np.arange(8,20)]),
+                    #np.arange(4,20),
                    ],#[np.arange(0,16)],
     
     'valid_folds': [np.arange(16,20),
                     np.arange(12,16),
                     np.arange(8,12),
-                    np.arange(4,8),
-                    np.arange(0,4)
+                    #np.arange(4,8),
+                    #np.arange(0,4)
                    ],#[np.arange(16,20)],
     
     'model_path': '../input/kh-rsna-model',
     'tag': 'efb0_stage2_multilabel'
 }
 
-SEED = 42321
+SEED = 42
 
 def seed_everything(seed):
     random.seed(seed)
